@@ -63,7 +63,7 @@ contract  apuestasCowboyDreams {
         _;
     }
 
-    modifier esCaballoRegistrado(uint _codigoCarrera, uint _codigoCaballo) {
+    modifier esCaballoRegistradoCarrera(uint _codigoCarrera, uint _codigoCaballo) {
         bool _found = false;
         uint[] memory caballos = carreras[_codigoCarrera].caballosRegistrados_carrera;
         for (uint i=0; i<caballos.length; i++){
@@ -72,6 +72,62 @@ contract  apuestasCowboyDreams {
             }
         }
         require(_found);
+        _;
+    }
+
+        modifier noEsCaballoRegistradoCarrera(uint _codigoCarrera, uint _codigoCaballo) {
+        bool _found = false;
+        uint[] memory caballos = carreras[_codigoCarrera].caballosRegistrados_carrera;
+        for (uint i=0; i<caballos.length; i++){
+            if(_codigoCaballo == caballos[i]) {
+                _found = true;
+            }
+        }
+        require(!_found);
+        _;
+    }
+
+    modifier esCaballoRegistrado(uint _codigoCaballo) {
+        bool _found = false;
+        for (uint i=0; i<codigoCaballos.length; i++){
+            if(_codigoCaballo == codigoCaballos[i]) {
+                _found = true;
+            }
+        }
+        require(_found);
+        _;
+    }
+
+    modifier noEsCaballoRegistrado(uint _codigoCaballo) {
+        bool _found = false;
+        for (uint i=0; i<codigoCaballos.length; i++){
+            if(_codigoCaballo == codigoCaballos[i]) {
+                _found = true;
+            }
+        }
+        require(!_found);
+        _;
+    }
+
+    modifier esCarreraCreada(uint _codigoCarrera) {
+        bool _found = false;
+        for (uint i=0; i<codigoCarreras.length; i++){
+            if(_codigoCarrera == codigoCarreras[i]) {
+                _found = true;
+            }
+        }
+        require(_found);
+        _;
+    }
+
+    modifier noEsCarreraCreada(uint _codigoCarrera) {
+        bool _found = false;
+        for (uint i=0; i<codigoCarreras.length; i++){
+            if(_codigoCarrera == codigoCarreras[i]) {
+                _found = true;
+            }
+        }
+        require(!_found);
         _;
     }
 
@@ -123,21 +179,23 @@ contract  apuestasCowboyDreams {
         balances[anfitrion] = 0;
     }
 
-    function crearCarrera(uint _codigoCarrera, string memory _nombreCarrera) public {
+    function crearCarrera(uint _codigoCarrera, string memory _nombreCarrera) public noEsCarreraCreada(_codigoCarrera) {
         Carrera memory c;
         c.nombreCarrera = _nombreCarrera;
         c.estadoCarrera = State.Creada;
+        codigoCarreras.push(_codigoCarrera);
         carreras[_codigoCarrera] = c;
         emit carreraCreada(_codigoCarrera, _nombreCarrera);
     }
 
-    function registrarCaballo(uint _codigoCaballo, string memory _nombreCaballo) public {
+    function registrarCaballo(uint _codigoCaballo, string memory _nombreCaballo) public noEsCaballoRegistrado(_codigoCaballo) {
         caballosRegistrados[_codigoCaballo] = _nombreCaballo;
+        codigoCaballos.push(_codigoCaballo);
         emit caballoRegistrado(_codigoCaballo, _nombreCaballo);
     }
 
     function registrarCaballoEnCarrera(uint _codigoCarrera, uint _codigoCaballo) public enEstado(State.Creada, _codigoCarrera) 
-    capacidadCaballosCarrera(_codigoCarrera) {
+    noEsCaballoRegistradoCarrera(_codigoCarrera, _codigoCaballo)  esCaballoRegistrado(_codigoCaballo) capacidadCaballosCarrera(_codigoCarrera) {
         Carrera storage _carrera = carreras[_codigoCarrera];
         _carrera.caballosRegistrados_carrera.push(_codigoCaballo);
         emit caballoRegistradoCarrera(_codigoCarrera, _codigoCaballo);
@@ -151,7 +209,7 @@ contract  apuestasCowboyDreams {
     }
 
     function apostar(uint _codigoCarrera, uint _codigoCaballo, uint montoApuesta) public enEstado(State.Registrada, _codigoCarrera)
-    noAnfitrion() esCaballoRegistrado(_codigoCarrera, _codigoCaballo) validacionApostador(_codigoCarrera, msg.sender) {
+    noAnfitrion() esCaballoRegistradoCarrera(_codigoCarrera, _codigoCaballo) validacionApostador(_codigoCarrera, msg.sender) {
         Carrera storage _carrera = carreras[_codigoCarrera];
         Apuesta memory _apuesta;
         _apuesta.direccionApostador = msg.sender;
