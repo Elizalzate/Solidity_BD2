@@ -5,11 +5,6 @@ contract  apuestasCowboyDreams {
     // Declaración de enumeración con los estados válidos de cada carrera
     enum State {Creada, Registrada, Terminada}
 
-    // Estructura de un apostador
-    struct Apostador {
-        address payable direccionApostador;
-    }
-
     // Estructura de una apuesta
     struct Apuesta {
         address payable direccionApostador;
@@ -23,8 +18,8 @@ contract  apuestasCowboyDreams {
         uint Nroale;                                            // numero aleatorio que determinará al ganador de la carrera
         State estadoCarrera;                                    // variable para guardar el estado de la carrera
         uint[] caballosRegistrados_carrera;                     // array para guardar los caballos registrados en la carrera
-        Apostador[] apostadores;                                // array para guardar las direcciones de los apostadores participantes
-        Apostador[] apostadoresGanadores;                       // array para guardar los apostadores que ganaron la apuesta
+        address payable[] apostadores;                          // array para guardar las direcciones de los apostadores participantes
+        address payable[] apostadoresGanadores;                 // array para guardar los apostadores que ganaron la apuesta
         mapping (address => Apuesta) apuestas;                  // mapping para guardar las apuestas realizadas por cada apostador
         mapping (address => uint) premioGanadores;              // mapping para guardar los apostadores ganadores con el dinero que ganó cada uno
     }
@@ -53,9 +48,9 @@ contract  apuestasCowboyDreams {
 
     modifier esGanador(uint _codigoCarrera, address payable _direccionApostador) {
         bool _found = false;
-        Apostador[] memory ganadores = carreras[_codigoCarrera].apostadoresGanadores;
+        address payable[] memory ganadores = carreras[_codigoCarrera].apostadoresGanadores;
         for (uint i=0; i<ganadores.length; i++){
-            if(_direccionApostador == ganadores[i].direccionApostador) {
+            if(_direccionApostador == ganadores[i]) {
                 _found = true;
             }
         }
@@ -63,14 +58,26 @@ contract  apuestasCowboyDreams {
         _;
     }
 
-    // Eventos
-    event carreraCreada();
+    modifier capacidadCaballosCarrera(uint _codigoCarrera) {
+        require(carreras[_codigoCarrera].caballosRegistrados_carrera.length < 5,
+                "La capacidad máxima de caballos ya ha sido alcanzada en esta carrera");
+                _;
+    }
 
-    event carreraRegistrada();
+    modifier capacidadCaballosRegistro(uint _codigoCarrera) {
+    require(carreras[_codigoCarrera].caballosRegistrados_carrera.length >= 2,
+            "La capacidad mínima de caballos aún no ha sido alcanzada en esta carrera");
+            _;
+    }
+
+    // Eventos
+    event carreraCreada(uint _codigoCarrera, string _nombreCarrera);
+
+    event carreraRegistrada(uint _codigoCarrera, string _nombreCarrera);
 
     event carreraTerminada(uint carrera, string nombreCarrera, uint caballoGanador, string nombreCaballo, uint ethersApostados);
 
-    event caballoRegistrado();
+    event caballoRegistrado(uint _codigoCaballo, string _nombreCaballo);
 
     event caballoRegistradoCarrera();
 
@@ -85,7 +92,31 @@ contract  apuestasCowboyDreams {
         balances[anfitrion] = 0;
     }
 
+    function crearCarrera(uint _codigoCarrera, string memory _nombreCarrera) public {
+        Carrera memory c;
+        c.nombreCarrera = _nombreCarrera;
+        c.estadoCarrera = State.Creada;
+        carreras[_codigoCarrera] = c;
+        emit carreraCreada(_codigoCarrera, _nombreCarrera);
+    }
 
+    function registrarCaballo(uint _codigoCaballo, string memory _nombreCaballo) public {
+        caballosRegistrados[_codigoCaballo] = _nombreCaballo;
+        emit caballoRegistrado(_codigoCaballo, _nombreCaballo);
+    }
+
+    function registrarCaballoEnCarrera(uint _codigoCarrera, uint _codigoCaballo) public enEstado(State.Creada, _codigoCarrera) 
+    capacidadCaballosCarrera(_codigoCarrera) {
+        Carrera storage _carrera = carreras[_codigoCarrera];
+        _carrera.caballosRegistrados_carrera.push(_codigoCaballo);
+    }
+
+    function registrarCarrera(uint _codigoCarrera) public enEstado(State.Creada, _codigoCarrera)
+    capacidadCaballosRegistro(_codigoCarrera) {
+        Carrera storage _carrera = carreras[_codigoCarrera];
+        _carrera.estadoCarrera = State.Registrada;
+        emit carreraRegistrada(_codigoCarrera, _carrera.nombreCarrera);
+    }
 
     // Funcion para obtener la cantidad de carreras creadas en la casa de apuestas
     function getCantidadCarreras() public returns (uint numCarreras) {
@@ -117,7 +148,7 @@ contract  apuestasCowboyDreams {
 
     // Funcion para obtener los apostadores ganadores de una carrera ya terminada
     function getApostadoresGanadores(uint _codigoCarrera) public enEstado(State.Terminada, _codigoCarrera) 
-    returns (Apostador[] memory _apostadoresGanadores) {        
+    returns (address payable[] memory _apostadoresGanadores) {        
         return carreras[_codigoCarrera].apostadoresGanadores;
     }
 
@@ -130,10 +161,10 @@ contract  apuestasCowboyDreams {
     // Funcion para obtener los premios de los apostadores ganadores de una carrera
     function getPremiosGanadores(uint _codigoCarrera) public enEstado(State.Terminada, _codigoCarrera) returns (uint[] memory _premios){
         Carrera storage _carrera = carreras[_codigoCarrera];
-        Apostador[] memory _apostadoresGanadores = _carrera.apostadoresGanadores;
+        address payable[] memory _apostadoresGanadores = _carrera.apostadoresGanadores;
         uint[] memory premiosGanadores = new uint[](_apostadoresGanadores.length);
         for (uint i=0; i<_apostadoresGanadores.length; i++){
-            address payable _apostadorGanador = _apostadoresGanadores[i].direccionApostador;
+            address payable _apostadorGanador = _apostadoresGanadores[i];
             premiosGanadores[i] =_carrera.premioGanadores[_apostadorGanador];
         }
         return premiosGanadores;
@@ -159,18 +190,16 @@ contract  apuestasCowboyDreams {
         uint caballoGanador = getCaballoGanador(_codigoCarrera);
         // Sumamos todas las apuestas realizadas en la carrera y guardamos los apostadores ganadores
         for (uint i=0; i<_carrera.apostadores.length; i++) {
-            Apuesta memory _apuesta = _carrera.apuestas[_carrera.apostadores[i].direccionApostador];
+            Apuesta memory _apuesta = _carrera.apuestas[_carrera.apostadores[i]];
             ethersTotales += _apuesta.montoApostado;
             if (_apuesta.caballoApostado == caballoGanador) {
-                Apostador memory _apostador;
-                _apostador.direccionApostador = _apuesta.direccionApostador;
-                _carrera.apostadoresGanadores.push(_apostador);
+                _carrera.apostadoresGanadores.push(_apuesta.direccionApostador);
                 ethersCaballoGanador += _apuesta.montoApostado;
             }
         }
         uint montoAnfitrion = ethersTotales/4;
         for (uint i=0; i<_carrera.apostadoresGanadores.length; i++) {
-            address payable _apostadorGanador = _carrera.apostadoresGanadores[i].direccionApostador;
+            address payable _apostadorGanador = _carrera.apostadoresGanadores[i];
             Apuesta memory _apuesta = _carrera.apuestas[_apostadorGanador];
             uint premioGanador = (_apuesta.montoApostado/ethersCaballoGanador)*ethersTotales;
             _carrera.premioGanadores[_apostadorGanador] = premioGanador;
