@@ -226,10 +226,12 @@ contract  apuestasCowboyDreams {
         address payable[] memory _apostadores = _carrera.apostadores;
         uint caballo;
         for (uint i=0; i<_apostadores.length; i++){
-            if (msg.sender == _apostadores[i]){
-                msg.sender.transfer(_carrera.apuestas[msg.sender].montoApostado);
-                _carrera.apuestas[msg.sender].montoApostado = msg.value;
-                caballo =  _carrera.apuestas[msg.sender].caballoApostado;
+            if (msg.sender == _apostadores[i])  {
+                if (msg.value > _carrera.apuestas[msg.sender].montoApostado)}
+                    msg.sender.transfer(_carrera.apuestas[msg.sender].montoApostado);
+                    _carrera.apuestas[msg.sender].montoApostado = msg.value;
+                    caballo =  _carrera.apuestas[msg.sender].caballoApostado;
+                }
             } 
         }
         emit apuestaActualizada(_codigoCarrera, caballo, msg.value, msg.sender);
