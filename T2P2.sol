@@ -319,7 +319,7 @@ contract  apuestasCowboyDreams {
         for (uint i=0; i<_carrera.apostadoresGanadores.length; i++) {
             address payable _apostadorGanador = _carrera.apostadoresGanadores[i];
             Apuesta memory _apuesta = _carrera.apuestas[_apostadorGanador];
-            uint premioGanador = (_apuesta.montoApostado/ethersCaballoGanador)*ethersTotales;
+            uint premioGanador = (((_apuesta.montoApostado*100)/ethersCaballoGanador)*ethersTotales)/100;
             _carrera.premioGanadores[_apostadorGanador] = premioGanador;
             _apostadorGanador.transfer(premioGanador);
             balances[_apostadorGanador] += premioGanador;
