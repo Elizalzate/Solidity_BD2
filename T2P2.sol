@@ -29,7 +29,7 @@ contract  apuestasCowboyDreams {
     uint[] codigoCaballos;                                      // array para guardar los códigos de los caballos registrados
 
     // Mappings para guardar los datos de las carreras y los caballos
-    mapping (uint => Carrera) public carrerasRegistradas;       // mapping para guardar las carreras creadas, en donde el índice es su código
+    mapping (uint => Carrera) public carreras;                  // mapping para guardar las carreras creadas, en donde el índice es su código
     mapping (uint => string) public caballosRegistrados;        // mapping para guardar los caballos registrados con su respectivo nombre
     mapping (uint => uint) public caballosEnCarreras;           // mapping para guardar los caballos registrados en cada carrera
     mapping (address => uint) public balances;                  // mapping para guardar las direcciones (usuarios) y sus respectivos saldos
@@ -50,6 +50,22 @@ contract  apuestasCowboyDreams {
         _;
     }
 
+    // Eventos
+    event carreraCreada();
+
+    event carreraRegistrada();
+
+    event carreraTerminada(uint carrera, string nombreCarrera, uint caballoGanador, string nombreCaballo, uint ethersApostados);
+
+    event caballoRegistrado();
+
+    event caballoRegistradoCarrera();
+
+    event apuestaRealizada();
+
+    event apuestaGanadora(address apostadorGanador, uint apuestaRealizada, uint premio);
+
+
     // Constructor: se crea una instancia de la casa de apuestas
     constructor(address payable _anfitrion) public {
         anfitrion = _anfitrion;                                 // Dirección del invocador (anfitrion)
@@ -58,7 +74,7 @@ contract  apuestasCowboyDreams {
 
     // Funcion para obtener una carrera determinada
     function getCarrera(uint _codigoCarrera) public returns (Carrera memory _carrera) {
-        return carrerasRegistradas[_codigoCarrera];
+        return carreras[_codigoCarrera];
     }
 
     // Funcion para obtener la cantidad de carreras creadas en la casa de apuestas
@@ -97,8 +113,20 @@ contract  apuestasCowboyDreams {
 
     // Funcion para obtener el dinero de un apostador
     function getPremioGanador(uint _codigoCarrera, address _direccionGanador) public esGanador(_codigoCarrera, _direccionGanador)
-    returns (uint _premio) {
+    enEstado(State.Terminada, _codigoCarrera) returns (uint _premio) {
         return getCarrera(_codigoCarrera).premioGanadores[_direccionGanador];
+    }
+
+    // Funcion para obtener los premios de los apostadores ganadores de una carrera
+    function getPremiosGanadores(uint _codigoCarrera) public enEstado(State.Terminada, _codigoCarrera) returns (uint[] memory _premios){
+        uint[] memory premiosGanadores;
+        Carrera memory _carrera = getCarrera(_codigoCarrera);
+        uint[] memory _apostadoresGanadores = _carrera.apostadoresGanadores;
+        for (uint i=0; i<_apostadoresGanadores.length; i++){
+            address _apostadorGanador = _apostadoresGanadores[i];
+            premiosGanadores.push(_carrera.premioGanadores[_apostadorGanador]);
+        }
+        return premiosGanadores;
     }
 
     // Funcion para generar un numero aleatorio perteneciente al rango (0, _range-1)
@@ -128,13 +156,18 @@ contract  apuestasCowboyDreams {
             }
         }
         uint montoAnfitrion = ethersTotales/4;
-        ethersTotales -= montoAnfitrion;
+        uint ethersGanadores = ethersTotales - montoAnfitrion;
         for (uint i=0; i<_carrera.apostadoresGanadores.length; i++) {
             address _apostadorGanador = _carrera.apostadoresGanadores[i];
             Apuesta memory _apuesta = _carrera.apuestas[_apostadorGanador];
             uint premioGanador = (_apuesta.montoApostado/ethersCaballoGanador)*ethersTotales;
             _carrera.premioGanadores[_apostadorGanador] = premioGanador;
             _apostadorGanador.tranfer(premioGanador);
+            balances[_apostadorGanador] += premioGanador;
+            emit apuestaGanadora(_apostadorGanador, _apuesta.montoApostado, premioGanador);
         }
+        anfitrion.transfer(montoAnfitrion);
+        string memory nombreCaballoGanador = caballosRegistrados[caballoGanador];
+        emit carreraTerminada(_codigoCarrera, _carrera.nombreCarrera, caballoGanador, nombreCaballoGanador, ethersTotales);
     }
 }
