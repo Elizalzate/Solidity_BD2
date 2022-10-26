@@ -130,16 +130,11 @@ contract  apuestasCowboyDreams {
         uint montoAnfitrion = ethersTotales/4;
         ethersTotales -= montoAnfitrion;
         for (uint i=0; i<_carrera.apostadoresGanadores.length; i++) {
-            address[] memory _apostadorGanador = _carrera.apostadoresGanadores[i];
+            address _apostadorGanador = _carrera.apostadoresGanadores[i];
             Apuesta memory _apuesta = _carrera.apuestas[_apostadorGanador];
             uint premioGanador = (_apuesta.montoApostado/ethersCaballoGanador)*ethersTotales;
-            _carrera.premioGanadores[_apostadoresGanadores[i]] = premioGanador;
-            _apostadoresGanadores
+            _carrera.premioGanadores[_apostadorGanador] = premioGanador;
+            _apostadorGanador.tranfer(premioGanador);
         }
-    }
-
-    // Funcion para transferir el dinero a un usuario
-    function pay(address _beneficiary, uint _amount) public payable {
-        _beneficiary.transfer(_amount);
     }
 }
