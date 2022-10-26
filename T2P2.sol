@@ -41,6 +41,11 @@ contract  apuestasCowboyDreams {
         _;
     }
 
+    modifier noAnfitrion() {
+        require(msg.sender != anfitrion);
+        _;
+    }
+
     modifier enEstado(State _state, uint _codigoCarrera) {
         require(getEstadoCarrera(_codigoCarrera) == _state);
         _;
@@ -55,6 +60,30 @@ contract  apuestasCowboyDreams {
             }
         }
         require(_found);
+        _;
+    }
+
+    modifier esCaballoRegistrado(uint _codigoCarrera, uint _codigoCaballo) {
+        bool _found = false;
+        uint[] memory caballos = carreras[_codigoCarrera].caballosRegistrados_carrera;
+        for (uint i=0; i<caballos.length; i++){
+            if(_codigoCaballo == caballos[i]) {
+                _found = true;
+            }
+        }
+        require(_found);
+        _;
+    }
+
+    modifier validacionApostador(uint _codigoCarrera, address payable _direccionApostador) {
+        bool _found = false;
+        address payable[] memory _apostadores = carreras[_codigoCarrera].apostadores;
+        for (uint i=0; i<_apostadores.length; i++){
+            if(_direccionApostador == _apostadores[i]) {
+                _found = true;
+            }
+        }
+        require(!_found, "Ya has apostado en esta carrera, no puedes apostar otra vez");
         _;
     }
 
@@ -79,9 +108,11 @@ contract  apuestasCowboyDreams {
 
     event caballoRegistrado(uint _codigoCaballo, string _nombreCaballo);
 
-    event caballoRegistradoCarrera();
+    event caballoRegistradoCarrera(uint _codigoCarrera, uint _codigoCaballo);
 
-    event apuestaRealizada();
+    event apuestaRealizada(uint _codigoCarrera, uint _codigoCaballo, uint montoApuesta, address payable direccionApostador);
+
+    event apuestaActualizada(uint _codigoCarrera, uint _codigoCaballo, uint montoApuesta, address payable direccionApostador);
 
     event apuestaGanadora(address apostadorGanador, uint apuestaRealizada, uint premio);
 
@@ -109,6 +140,7 @@ contract  apuestasCowboyDreams {
     capacidadCaballosCarrera(_codigoCarrera) {
         Carrera storage _carrera = carreras[_codigoCarrera];
         _carrera.caballosRegistrados_carrera.push(_codigoCaballo);
+        emit caballoRegistradoCarrera(_codigoCarrera, _codigoCaballo);
     }
 
     function registrarCarrera(uint _codigoCarrera) public enEstado(State.Creada, _codigoCarrera)
@@ -116,6 +148,32 @@ contract  apuestasCowboyDreams {
         Carrera storage _carrera = carreras[_codigoCarrera];
         _carrera.estadoCarrera = State.Registrada;
         emit carreraRegistrada(_codigoCarrera, _carrera.nombreCarrera);
+    }
+
+    function apostar(uint _codigoCarrera, uint _codigoCaballo, uint montoApuesta) public enEstado(State.Registrada, _codigoCarrera)
+    noAnfitrion() esCaballoRegistrado(_codigoCarrera, _codigoCaballo) validacionApostador(_codigoCarrera, msg.sender) {
+        Carrera storage _carrera = carreras[_codigoCarrera];
+        Apuesta memory _apuesta;
+        _apuesta.direccionApostador = msg.sender;
+        _apuesta.montoApostado = montoApuesta;
+        _apuesta.caballoApostado = _codigoCaballo;
+        _carrera.apostadores.push(msg.sender);
+        _carrera.apuestas[msg.sender] = _apuesta;
+        emit apuestaRealizada(_codigoCarrera, _codigoCaballo, montoApuesta, msg.sender);
+    }
+
+    function actualizarApuesta(uint _codigoCarrera, uint montoActualizado) public enEstado(State.Registrada, _codigoCarrera)
+    noAnfitrion() {
+        Carrera storage _carrera = carreras[_codigoCarrera];
+        address payable[] memory _apostadores = _carrera.apostadores;
+        uint caballo;
+        for (uint i=0; i<_apostadores.length; i++){
+            if (msg.sender == _apostadores[i]){
+                _carrera.apuestas[msg.sender].montoApostado = montoActualizado;
+                caballo =  _carrera.apuestas[msg.sender].caballoApostado;
+            } 
+        }
+        emit apuestaActualizada(_codigoCarrera, caballo, montoActualizado, msg.sender);
     }
 
     // Funcion para obtener la cantidad de carreras creadas en la casa de apuestas
