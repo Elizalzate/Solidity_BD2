@@ -169,7 +169,6 @@ contract  apuestasCowboyDreams {
             }
         }
         uint montoAnfitrion = ethersTotales/4;
-        uint ethersGanadores = ethersTotales - montoAnfitrion;
         for (uint i=0; i<_carrera.apostadoresGanadores.length; i++) {
             address payable _apostadorGanador = _carrera.apostadoresGanadores[i].direccionApostador;
             Apuesta memory _apuesta = _carrera.apuestas[_apostadorGanador];
