@@ -208,30 +208,31 @@ contract  apuestasCowboyDreams {
         emit carreraRegistrada(_codigoCarrera, _carrera.nombreCarrera);
     }
 
-    function apostar(uint _codigoCarrera, uint _codigoCaballo, uint montoApuesta) public enEstado(State.Registrada, _codigoCarrera)
+    function apostar(uint _codigoCarrera, uint _codigoCaballo) public payable enEstado(State.Registrada, _codigoCarrera)
     noAnfitrion() esCaballoRegistradoCarrera(_codigoCarrera, _codigoCaballo) validacionApostador(_codigoCarrera, msg.sender) {
         Carrera storage _carrera = carreras[_codigoCarrera];
         Apuesta memory _apuesta;
         _apuesta.direccionApostador = msg.sender;
-        _apuesta.montoApostado = montoApuesta;
+        _apuesta.montoApostado = msg.value;
         _apuesta.caballoApostado = _codigoCaballo;
         _carrera.apostadores.push(msg.sender);
         _carrera.apuestas[msg.sender] = _apuesta;
-        emit apuestaRealizada(_codigoCarrera, _codigoCaballo, montoApuesta, msg.sender);
+        emit apuestaRealizada(_codigoCarrera, _codigoCaballo, msg.value, msg.sender);
     }
 
-    function actualizarApuesta(uint _codigoCarrera, uint montoActualizado) public enEstado(State.Registrada, _codigoCarrera)
+    function actualizarApuesta(uint _codigoCarrera) public payable enEstado(State.Registrada, _codigoCarrera)
     noAnfitrion() {
         Carrera storage _carrera = carreras[_codigoCarrera];
         address payable[] memory _apostadores = _carrera.apostadores;
         uint caballo;
         for (uint i=0; i<_apostadores.length; i++){
             if (msg.sender == _apostadores[i]){
-                _carrera.apuestas[msg.sender].montoApostado = montoActualizado;
+                msg.sender.transfer(_carrera.apuestas[msg.sender].montoApostado);
+                _carrera.apuestas[msg.sender].montoApostado = msg.value;
                 caballo =  _carrera.apuestas[msg.sender].caballoApostado;
             } 
         }
-        emit apuestaActualizada(_codigoCarrera, caballo, montoActualizado, msg.sender);
+        emit apuestaActualizada(_codigoCarrera, caballo, msg.value, msg.sender);
     }
 
     // Funcion para obtener la cantidad de carreras creadas en la casa de apuestas
@@ -287,14 +288,13 @@ contract  apuestasCowboyDreams {
     }
 
     // Funcion para generar un numero aleatorio perteneciente al rango (0, _range-1)
-    // Funcion para generar un numero aleatorio perteneciente al rango (0, _range-1)
     function random(uint _range) private view returns (uint) {
     uint randomHash = uint(keccak256(abi.encodePacked(now)));
     return randomHash % _range;
     } 
 
     // Funcion para culminar una carrera
-    function terminarCarrera(uint _codigoCarrera) public payable enEstado(State.Registrada, _codigoCarrera) {
+    function terminarCarrera(uint _codigoCarrera) public enEstado(State.Registrada, _codigoCarrera) {
         Carrera storage _carrera = carreras[_codigoCarrera];
         // Cambiamos el estado de la carrera a terminada
         _carrera.estadoCarrera = State.Terminada;
