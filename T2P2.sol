@@ -37,17 +37,17 @@ contract  apuestasCowboyDreams {
 
     // Modificadores
     modifier soloAnfitrion() {
-        require(msg.sender == anfitrion);
+        require(msg.sender == anfitrion, "Solo el anfitrion puede ejecutar esta acción");
         _;
     }
 
     modifier noAnfitrion() {
-        require(msg.sender != anfitrion);
+        require(msg.sender != anfitrion, "el anfitrion no puede realizar esta acción");
         _;
     }
 
     modifier enEstado(State _state, uint _codigoCarrera) {
-        require(getEstadoCarrera(_codigoCarrera) == _state);
+        require(getEstadoCarrera(_codigoCarrera) == _state, "el estado de la carrera es inválido para la acción solicitada");
         _;
     }
 
@@ -59,7 +59,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(_found);
+        require(_found, "el apostador ingresado no es ganador");
         _;
     }
 
@@ -71,7 +71,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(_found);
+        require(_found, "el caballo ingresado no está registrado en la carrera");
         _;
     }
 
@@ -83,7 +83,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(!_found);
+        require(!_found, "el caballo ingresado está registrado en la carrera");
         _;
     }
 
@@ -94,7 +94,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(_found);
+        require(_found, "el caballo ingresado no ha sido registrado en la casa de apuestas");
         _;
     }
 
@@ -105,7 +105,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(!_found);
+        require(!_found, "el caballo ingresado ya ha sido registrado en la casa de apuestas");
         _;
     }
 
@@ -116,7 +116,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(_found);
+        require(_found, "la carrera ingresada no ha sido creada en la casa de apuestas");
         _;
     }
 
@@ -127,7 +127,7 @@ contract  apuestasCowboyDreams {
                 _found = true;
             }
         }
-        require(!_found);
+        require(!_found, "la carrera ingresada ya ha sido creada en la casa de apuestas");
         _;
     }
 
