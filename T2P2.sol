@@ -227,7 +227,7 @@ contract  apuestasCowboyDreams {
         uint caballo;
         for (uint i=0; i<_apostadores.length; i++){
             if (msg.sender == _apostadores[i])  {
-                if (msg.value > _carrera.apuestas[msg.sender].montoApostado)}
+                if (msg.value > _carrera.apuestas[msg.sender].montoApostado){
                     msg.sender.transfer(_carrera.apuestas[msg.sender].montoApostado);
                     _carrera.apuestas[msg.sender].montoApostado = msg.value;
                     caballo =  _carrera.apuestas[msg.sender].caballoApostado;
